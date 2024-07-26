@@ -144,35 +144,28 @@ Gyroscope packets are constantly sent by the cube with **message type** 0xAB in 
 | 0 - 7 | u8 | 8 bits (1 byte) | Message Type (0xAB) |
 | 8 - 135 | Quaternion | 128 bits (16 bytes) | Quaternion (see decoding procedure below) |
 
-The quaternion is encoded as four `4 byte` signed integers in the order `(w, x, -z, y)` in **little-endian byte order**.\
-Each chunk of 4 bytes can be converted to the correct floating-point representation as follows:
+**NOTE**: The "official" implementation of this decoding performs `>> 24` on a signed 32-bit integer, causing what I assume is an unintentional sign extension during parsing if the MSB of the last byte in the 4-byte chunk is set. This can then cause an integer overflow during addition, resulting in `1` being subtracted from one of the bytes. The below assumes this is not intended behaviour.
 
-1. Let `a` be equal to the 4 byte chunk (i.e. an array of 4 bytes)
-2. If the MSB of `a[0]` is set (i.e `(a[0] >> 7) & 1 == 1`), subtract `1` from `a[1]`
-3. Parse `a` as a signed 32-bit integer in **little-endian byte order**, let `b` be equal to the resulting integer
-4. If necessary in your language of choice, **cast** `b` from a 32-bit signed integer to a 32-bit float, then multiply `b` by `2^(-30)` (`9.3132257e-10`). The result will be the correct floating-point representation.
+The quaternion is encoded as four `4 byte` signed integers in the order `(w, x, -z, y)` in **little-endian byte order**.\
+Each chunk of 4 bytes can be converted to the correct floating-point representation by parsing each 4-byte chunk as a signed 32-bit integer in **little-endian byte order**, casting it to a float if necessary, then dividing it by `2^30`.
 
 For example, given the packet `0xAB47882CFFF873493FA2B87509ECB43AFF000000`:
 
 - 0xAB is the message type
 - Our first 4-byte chunk is `0x47882CFF`
-  - `(0x47 >> 7) & 1` == `0`, therefore we continue to the next step
   - We parse `0x47882CFF` as a 32-bit signed integer in **little-endian byte order**, the result is `-13858745`
-  - We multiply `-13858745` by `2^(-30)`, giving `-0.01290696207433939`
-  - Thus, `w = -0.01290696207433939`
+  - We divide `-13858745` by `2^30`, giving `-0.012906962`
+  - Thus, `w = -0.012906962`
 - Our second 4-byte chunk is `0xF873493F`
-  - `(0xF8 >> 7) & 1` == `1`, therefore we subtract `1` from `0x73` = `0x72`, giving `0xF872493F` as our new value
-  - We parse `0xF872493F` as a 32-bit signed integer in **little-endian byte order**, the result is `1061778168`
-  - We multiply `1061778168` by `2^(-30)`, giving `0.9888579770922661`
-  - Thus, `x = 0.9888579770922661`
+  - We parse `0xF873493F` as a 32-bit signed integer in **little-endian byte order**, the result is `1061778424`
+  - We divide `1061778424` by `2^30`, giving `0.9888582`
+  - Thus, `x = 0.9888582`
 - Our third 4-byte chunk is `0xA2B87509`
-  - `(0xA2 >> 7) & 1` == `1`, therefore we subtract `1` from `0xB8` = `0xB7`, giving `0xA2B77509` as our new value
-  - We parse `0xA2B77509` as a 32-bit signed integer in **little-endian byte order**, the result is `158709666`
-  - We multiply `158709666` by `2^(-30)`, giving `0.14780989475548267`
-  - Thus, `-z = 0.14780989475548267`, and therefore, `z = -0.14780989475548267`
+  - We parse `0xA2B87509` as a 32-bit signed integer in **little-endian byte order**, the result is `158709922`
+  - We divide `158709922` by `2^30`, giving `0.14780989475548267`
+  - Thus, `-z = 0.14781013`, and therefore, `z = -0.14781013`
 - Our fourth 4-byte chunk is `0xECB43AFF`
-  - `(0xEC >> 7) & 1` == `1`, therefore we subtract `1` from `0xB4` = `0xB3`, giving `0xECB33AFF` as our new value
-  - We parse `0xECB33AFF` as a 32-bit signed integer in **little-endian byte order**, the result is `-12930068`
-  - We multiply `-12930068` by `2^(-30)`, giving `-0.012042064219713211`
-  - Thus, `y = -0.012042064219713211`
-- Our resulting `Quaternion(x, y, z, w)` is therefore `Quaternion(0.9888579770922661, -0.012042064219713211, -0.14780989475548267, -0.01290696207433939)`
+  - We parse `0xECB43AFF` as a 32-bit signed integer in **little-endian byte order**, the result is `-12929812`
+  - We divide `-12930068` by `2^30`, giving `-0.012041826`
+  - Thus, `y = -0.012041826`
+- Our resulting `Quaternion(x, y, z, w)` is therefore `Quaternion(0.9888582, -0.012041826, -0.14781013, -0.012906962)`
