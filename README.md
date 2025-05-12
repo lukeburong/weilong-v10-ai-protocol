@@ -169,3 +169,21 @@ For example, given the packet `0xAB47882CFFF873493FA2B87509ECB43AFF000000`:
   - We divide `-12930068` by `2^30`, giving `-0.012041826`
   - Thus, `y = -0.012041826`
 - Our resulting `Quaternion(x, y, z, w)` is therefore `Quaternion(0.9888582, -0.012041826, -0.14781013, -0.012906962)`
+
+## Cube Gyroscope (0xAC)
+
+A request can be made for disabling gyroscope by sending a packet with message type 0xAC and third byte to 0:
+
+`AC00000000000000000000000000000000000000`
+
+A request can be made for enabling gyroscope by sending a packet with message type 0xAC and third byte to 1:
+
+`AC00010000000000000000000000000000000000`
+
+The cube responds with a packet in the following format:
+
+| Bits | Type | Length | Description |
+| :-----: | :--------: | :-----------------: | :---------------------------------------: |
+| 0 - 7 | u8 | 8 bits (1 byte) | Message Type (0xAC) |
+| 8 - 15 | u8 | 8 bits (1 byte) | Gyro Functional? |
+| 16 - 23 | u8 | 8 bits (1 byte) | Gyro Enabled |
