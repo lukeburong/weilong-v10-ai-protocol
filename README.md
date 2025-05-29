@@ -67,6 +67,9 @@ The cube responds with a packet in the following format:
 | 109 - 116 | u8 | 8 bits (1 byte) | Move Counter/Serial |
 | 117 - 139 | ? | 22 bits | Unknown |
 
+> [!TIP]
+> Immediately after connecting to the cube, you need to write a [Cube Info (0xA1)](#cube-info-0xa1) message to initialize correctly the cube.
+
 ## Cube Status (Facelet State) (0xA3)
 
 A request can be made for cube status (current facelet state) by sending a packet with **message type** `0xA3` and no data:
