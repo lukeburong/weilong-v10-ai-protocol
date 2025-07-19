@@ -30,7 +30,7 @@
 
 All communication takes place by writing packets to characteristic `0783b03e-7735-b5a0-1760-a305d2795cb2` and receiving responses from the cube on characteristic `0783b03e-7735-b5a0-1760-a305d2795cb1`.
 
-The cube advertises its own MAC address in the `Manufacturer Specific Data` of advertising packets with CIC `0x0000` if the cube is bound to an account in the WCU Cube app, and with CIC `0x0100` otherwise.
+The cube advertises its own MAC address in the `Manufacturer Specific Data` of advertising packets. The CIC is set to the `2 highest order bytes` of the bound account ID.
 
 # Packet Structure
 
