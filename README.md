@@ -70,6 +70,12 @@ The cube responds with a packet in the following format:
 > [!TIP]
 > Immediately after connecting to the cube, you need to write a [Cube Info (0xA1)](#cube-info-0xa1) message to initialize correctly the cube.
 
+> [!TIP]
+> If you develop on Windows RT (BLE), you need to manually enable notification on the read characteristic (eg : 0783b03e-7735-b5a0-1760-a305d2795cb1) in order to receive events (unlike GANi3 which is in Notify state by default).
+> Note that this is on top of the cube info message above, both are required in that case.
+> C# example below
+> readCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);
+
 ## Cube Status (Facelet State) (0xA3)
 
 A request can be made for cube status (current facelet state) by sending a packet with **message type** `0xA3` and no data:
