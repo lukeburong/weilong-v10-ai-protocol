@@ -7,7 +7,9 @@
 - [Packet Structure](#packet-structure)
 - [Encryption](#encryption)
 - [Message Types](#message-types)
+  - [Cube Disconnect (0xA0)](#cube-disconnect-0xa0)
   - [Cube Info (0xA1)](#cube-info-0xa1)
+  - [Set Cube State (0xA2)](#set-cube-state-0xa2)
   - [Cube Status (Facelet State) (0xA3)](#cube-status-facelet-state-0xa3)
   - [Cube Power (0xA4)](#cube-power-0xa4)
   - [Cube Move (0xA5)](#cube-move-0xa5)
@@ -45,6 +47,20 @@ Root IV: `0x11232625862A2C3B55067F317E672157`
 
 # Message Types
 
+## Cube Disconnect (0xA0)
+
+Sent **by the cube** (notify characteristic) when it is about to drop the connection
+after a period of inactivity. After emitting this the cube returns to pairing mode and
+stops responding to writes, so the link should be considered dead — tear down the
+session and reconnect when the cube is needed again. This is unsolicited, not a reply
+to any request.
+
+| Bits | Type | Length | Description |
+| :------: | :--: | :-------------: | :-----------------: |
+| 0 - 7 | u8 | 8 bits (1 byte) | Message Type (0xA0) |
+
+Remaining bytes are not interpreted (no fields observed in use).
+
 ## Cube Info (0xA1)
 
 A request can be made for cube info by sending a packet with **message type** `0xA1` and no data:
@@ -76,6 +92,46 @@ The cube responds with a packet in the following format:
 > C# example below :
 
 `readCharacteristic.WriteClientCharacteristicConfigurationDescriptorAsync(GattClientCharacteristicConfigurationDescriptorValue.Notify);`
+
+## Set Cube State (0xA2)
+
+Sent **to the cube** (write characteristic) to overwrite the state the cube tracks
+internally.
+
+The cube has no way to sense its sticker positions directly — it infers its state by
+tracking turns from an assumed starting position and maintaining an internal model of the
+cube. That model can drift out of sync with the cube's actual physical configuration: e.g.
+it assumes solved at power-on / connect when the cube isn't, or it loses a turn. Once that
+happens, the state the cube reports (`0xA3`) no longer matches the cube in your hand, and
+nothing in the move stream can correct it.
+
+`0xA2` is the recovery path: it writes a *known* facelet state straight into the cube's
+internal tracker, realigning it with reality. In practice you physically solve the cube and
+send the solved snapshot below — from that point the cube's internal model matches the
+physical cube again, and turn tracking stays correct.
+
+The payload mirrors the **Cube Status (0xA3)** layout exactly — it is the "set" to `0xA3`'s
+"get".
+
+Solved request:
+```
+A20000002492494924926DB6DB924924B6DB6D00
+```
+
+| Bits | Type | Length | Description |
+| :-------: | :----------------------: | :-----------------: | :--------------------------------: |
+| 0 - 7 | u8 | 8 bits (1 byte) | Message Type (0xA2) |
+| 8 - 151 | Facelet Data (see 0xA3) | 144 bits (18 bytes) | Facelet Data (face order `FBUDLR`) |
+| 152 - 159 | u8 | 8 bits (1 byte) | Unused (ignored by the cube) |
+
+The 144-bit facelet field uses the same encoding as `0xA3`; solved decodes to:
+
+```
+000000001111111122222222333333334444444455555555
+```
+
+The cube replies to a `0xA2` write with an unsolicited `0xA3` state packet, so the new state
+comes back automatically — no separate `0xA3` request is needed.
 
 ## Cube Status (Facelet State) (0xA3)
 
